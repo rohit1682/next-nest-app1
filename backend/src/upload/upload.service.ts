@@ -1,10 +1,13 @@
+/// <reference types="multer" />
 import { BadRequestException, Injectable } from '@nestjs/common';
 import * as Papa from 'papaparse';
 import { ParsedCsvResult } from './dto/parsed-csv-result.dto';
 
+type MulterFile = Express.Multer.File;
+
 @Injectable()
 export class UploadService {
-  parseCsv(file: Express.Multer.File): ParsedCsvResult {
+  parseCsv(file: MulterFile): ParsedCsvResult {
     if (!file) {
       throw new BadRequestException('No file uploaded. Field name must be "file".');
     }
