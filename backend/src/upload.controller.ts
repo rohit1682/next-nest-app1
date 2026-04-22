@@ -6,7 +6,11 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import type { Multer } from 'multer';
 import * as Papa from 'papaparse';
+
+// Ensure multer's Express namespace augmentation is loaded
+type MulterFile = Express.Multer.File;
 
 @Controller()
 export class UploadController {
