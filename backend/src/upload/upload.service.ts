@@ -1,22 +1,10 @@
-import {
-  BadRequestException,
-  Controller,
-  Post,
-  UploadedFile,
-  UseInterceptors,
-} from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
-import type { Multer } from 'multer';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import * as Papa from 'papaparse';
+import { ParsedCsvResult } from './dto/parsed-csv-result.dto';
 
-// Ensure multer's Express namespace augmentation is loaded
-type MulterFile = Express.Multer.File;
-
-@Controller()
-export class UploadController {
-  @Post('upload')
-  @UseInterceptors(FileInterceptor('file'))
-  upload(@UploadedFile() file: Express.Multer.File) {
+@Injectable()
+export class UploadService {
+  parseCsv(file: Express.Multer.File): ParsedCsvResult {
     if (!file) {
       throw new BadRequestException('No file uploaded. Field name must be "file".');
     }
@@ -39,7 +27,7 @@ export class UploadController {
       filename: file.originalname,
       rowCount: result.data.length,
       fields: result.meta.fields ?? [],
-      data: result.data,
+      data: result.data as Record<string, unknown>[],
     };
   }
 }
