@@ -20,8 +20,10 @@ export class CsvService {
       throw new BadRequestException('No file uploaded. Field name must be "file".');
     }
 
-    if (file.mimetype && !this.isCsvMimeType(file.mimetype)) {
-      this.logger.warn(`Rejected file with mimetype "${file.mimetype}"`);
+    if (!this.isAcceptedCsv(file)) {
+      this.logger.warn(
+        `Rejected file "${file.originalname}" with mimetype "${file.mimetype}"`,
+      );
       throw new BadRequestException('Only CSV files are accepted');
     }
 
@@ -93,13 +95,17 @@ export class CsvService {
     return validationErrors.flatMap((error) => Object.values(error.constraints ?? {}));
   }
 
-  private isCsvMimeType(mimetype: string): boolean {
-    const allowed = new Set([
+  private isAcceptedCsv(file: Express.Multer.File): boolean {
+    const allowedMime = new Set([
       'text/csv',
       'application/csv',
       'application/vnd.ms-excel',
       'text/plain',
+      'application/octet-stream',
+      '',
     ]);
-    return allowed.has(mimetype);
+    const mimeOk = allowedMime.has(file.mimetype ?? '');
+    const extOk = (file.originalname ?? '').toLowerCase().endsWith('.csv');
+    return mimeOk || extOk;
   }
 }

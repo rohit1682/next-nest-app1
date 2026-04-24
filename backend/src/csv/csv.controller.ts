@@ -48,7 +48,6 @@ export class CsvController {
   uploadCsv(
     @UploadedFile(
       new ParseFilePipeBuilder()
-        .addFileTypeValidator({ fileType: /(csv|plain|excel)/i })
         .addMaxSizeValidator({ maxSize: 5 * 1024 * 1024 })
         .build({
           fileIsRequired: true,
