@@ -31,7 +31,8 @@ frontend/
     page.tsx                      # Upload form + tables for valid rows & errors
     layout.tsx
     globals.css
-sample.csv                        # Example CSV for testing
+sample.csv                        # Valid CSV (all rows pass validation)
+sample-invalid.csv                # CSV containing rows that fail validation
 ```
 
 ---
@@ -150,13 +151,40 @@ curl -X POST http://localhost:3001/upload \
 }
 ```
 
-### Sample CSV
+### Sample CSVs
+
+Two files are provided in the repo root:
+
+**`sample.csv`** — every row is valid, the response will contain only `valid` entries:
 
 ```
 name,age,email,department
 John,25,john@example.com,Engineering
 Jane,30,jane@example.com,Marketing
-Invalid,,not-an-email,
+Alice,28,alice@example.com,Design
+Bob,35,bob@example.com,Sales
+Charlie,22,charlie@example.com,Engineering
+Rohan,23,rohan@example.com,Support
+```
+
+**`sample-invalid.csv`** — mixes valid and invalid rows so you can see the `errors` array:
+
+```
+name,age,email,department
+John,25,john@example.com,Engineering        # valid
+,30,jane@example.com,Marketing              # name empty
+Alice,15,alice@example.com,Design           # age < 18
+Bob,40,not-an-email,Sales                   # email invalid
+Charlie,abc,charlie@example.com,Engineering # age not a number
+Diana,150,diana@example.com,Research        # age > 100
+Eve,28,eve@example.com,                     # valid (department optional)
+```
+
+Try them with curl:
+
+```bash
+curl -X POST http://localhost:3001/upload -F "file=@sample.csv"
+curl -X POST http://localhost:3001/upload -F "file=@sample-invalid.csv"
 ```
 
 ---
@@ -185,10 +213,8 @@ npm run test:watch
 
 1. Start backend and frontend (steps above).
 2. Open http://localhost:3000.
-3. Upload `sample.csv` from the repo root.
-4. Confirm:
-   - Two valid rows render in the **Valid Rows** table.
-   - One row appears in the **Errors** table with row number and per-field issues.
+3. Upload `sample.csv` from the repo root — confirm all 6 rows render in the **Valid Rows** table and the **Errors** table is empty.
+4. Upload `sample-invalid.csv` — confirm 2 rows appear in **Valid Rows** (John, Eve) and 5 rows appear in the **Errors** table with the failing field messages.
 
 ### Build (production)
 
