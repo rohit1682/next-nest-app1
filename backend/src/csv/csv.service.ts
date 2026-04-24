@@ -1,19 +1,36 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { validateSync, ValidationError } from 'class-validator';
 import * as Papa from 'papaparse';
 import { CsvRowDto } from './dto/csv-row.dto';
-import { CsvUploadResult, CsvValidRow } from './interfaces/csv.interface';
+import {
+  CsvRowError,
+  CsvUploadResult,
+  CsvValidRow,
+  RawCsvRow,
+} from './interfaces/csv.interface';
 
 @Injectable()
 export class CsvService {
+  private readonly logger = new Logger(CsvService.name);
+
   parseAndValidate(file: Express.Multer.File): CsvUploadResult {
     if (!file) {
+      this.logger.warn('Upload attempted with no file');
       throw new BadRequestException('No file uploaded. Field name must be "file".');
     }
 
+    if (file.mimetype && !this.isCsvMimeType(file.mimetype)) {
+      this.logger.warn(`Rejected file with mimetype "${file.mimetype}"`);
+      throw new BadRequestException('Only CSV files are accepted');
+    }
+
+    this.logger.log(
+      `Parsing file "${file.originalname}" (${file.size ?? file.buffer.length} bytes)`,
+    );
+
     const csvText = file.buffer.toString('utf8');
-    const parsed = Papa.parse<Record<string, string>>(csvText, {
+    const parsed = Papa.parse<RawCsvRow>(csvText, {
       header: true,
       skipEmptyLines: 'greedy',
       dynamicTyping: false,
@@ -21,6 +38,9 @@ export class CsvService {
     });
 
     if (parsed.errors.length > 0) {
+      this.logger.error(
+        `papaparse failed with ${parsed.errors.length} error(s) for "${file.originalname}"`,
+      );
       throw new BadRequestException({
         message: 'Failed to parse CSV',
         errors: parsed.errors,
@@ -28,17 +48,21 @@ export class CsvService {
     }
 
     const valid: CsvValidRow[] = [];
-    const errors: CsvUploadResult['errors'] = [];
+    const errors: CsvRowError[] = [];
 
     parsed.data.forEach((row, index) => {
+      const ageRaw = row.age;
       const normalized = {
-        name: (row.name ?? '').trim(),
+        name: typeof row.name === 'string' ? row.name.trim() : '',
         age:
-          row.age === undefined || row.age === null || row.age === ''
+          ageRaw === undefined || ageRaw === null || ageRaw === ''
             ? Number.NaN
-            : Number(row.age),
-        email: (row.email ?? '').trim(),
-        department: (row.department ?? '').trim() || undefined,
+            : Number(ageRaw),
+        email: typeof row.email === 'string' ? row.email.trim() : '',
+        department:
+          typeof row.department === 'string' && row.department.trim().length > 0
+            ? row.department.trim()
+            : undefined,
       };
 
       const dto = plainToInstance(CsvRowDto, normalized);
@@ -58,10 +82,24 @@ export class CsvService {
       valid.push(dto as CsvValidRow);
     });
 
+    this.logger.log(
+      `Parsed "${file.originalname}": ${valid.length} valid, ${errors.length} invalid`,
+    );
+
     return { valid, errors };
   }
 
   private extractMessages(validationErrors: ValidationError[]): string[] {
     return validationErrors.flatMap((error) => Object.values(error.constraints ?? {}));
+  }
+
+  private isCsvMimeType(mimetype: string): boolean {
+    const allowed = new Set([
+      'text/csv',
+      'application/csv',
+      'application/vnd.ms-excel',
+      'text/plain',
+    ]);
+    return allowed.has(mimetype);
   }
 }

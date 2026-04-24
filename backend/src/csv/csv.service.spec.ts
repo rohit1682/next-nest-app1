@@ -19,6 +19,8 @@ describe('CsvService', () => {
     const file = {
       buffer: Buffer.from(csv, 'utf8'),
       originalname: 'sample.csv',
+      size: csv.length,
+      mimetype: 'text/csv',
     } as Express.Multer.File;
 
     const result = service.parseAndValidate(file);

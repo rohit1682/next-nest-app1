@@ -46,13 +46,14 @@ export default function HomePage() {
         body: formData,
       });
       if (!res.ok) {
-        const body = await res.json().catch(() => null);
+        const body = (await res.json().catch(() => null)) as { message?: string } | null;
         throw new Error(body?.message || `Request failed: ${res.status}`);
       }
       const data = (await res.json()) as ParsedResponse;
       setResult(data);
-    } catch (err: any) {
-      setError(err.message || 'Upload failed');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Upload failed';
+      setError(message);
     } finally {
       setLoading(false);
     }

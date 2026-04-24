@@ -9,6 +9,8 @@
     "emitDecoratorMetadata": true,
     "isolatedModules": true,
     "strict": false,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
     "skipLibCheck": true,
     "moduleResolution": "node16",
     "types": ["node", "jest", "multer"]

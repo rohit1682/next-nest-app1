@@ -11,19 +11,21 @@ A two-app monorepo:
 
 ```
 backend/
+  .env.example                    # PORT / CORS_ORIGIN / SWAGGER_PATH
   src/
-    app.module.ts
-    main.ts                       # Global ValidationPipe, CORS, listens on :3001
+    app.module.ts                 # Imports ConfigModule (global) + CsvModule
+    main.ts                       # Bootstraps Nest: ConfigService, Logger, Swagger UI, ValidationPipe, CORS
     csv/
       csv.module.ts
-      csv.controller.ts           # POST /upload (Swagger decorated)
-      csv.service.ts              # papaparse + DTO validation
-      csv.controller.spec.ts      # Jest: controller w/ mocked service
+      csv.controller.ts           # POST /upload — Swagger decorated, ParseFilePipe (size + type)
+      csv.service.ts              # papaparse + DTO validation, NestJS Logger
+      csv.controller.spec.ts      # Jest: controller w/ mocked service (success + error)
       csv.service.spec.ts         # Jest: parses CSV + validation behavior
       dto/
-        csv-row.dto.ts            # class-validator rules
+        csv-row.dto.ts            # class-validator rules + @ApiProperty
+        csv-upload-response.dto.ts# Swagger response schema
       interfaces/
-        csv.interface.ts          # CsvUploadResult / CsvValidRow / CsvRowError
+        csv.interface.ts          # CsvUploadResult / CsvValidRow / CsvRowError / RawCsvRow
 frontend/
   app/
     page.tsx                      # Upload form + tables for valid rows & errors
@@ -49,6 +51,25 @@ cd ../frontend && npm install
 
 ---
 
+## Configuration
+
+The backend is configured entirely via environment variables (loaded by `@nestjs/config`).
+Copy the template and edit as needed:
+
+```bash
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env.local
+```
+
+| Variable              | Default                  | Description                                       |
+| --------------------- | ------------------------ | ------------------------------------------------- |
+| `PORT`                | `3001`                   | Port the Nest API listens on                      |
+| `CORS_ORIGIN`         | `*`                      | Allowed CORS origin (set to your frontend URL)    |
+| `SWAGGER_PATH`        | `docs`                   | Path Swagger UI is mounted at (`/docs`)           |
+| `NEXT_PUBLIC_API_URL` | `http://localhost:3001`  | Backend URL the Next.js frontend calls            |
+
+---
+
 ## Run
 
 ### 1. Start the backend (port 3001)
@@ -58,7 +79,14 @@ cd backend
 npm run start:dev
 ```
 
-You should see: `Backend running on http://localhost:3001`.
+You should see logs from the Nest `Logger`:
+
+```
+[Bootstrap] Backend running on http://localhost:3001
+[Bootstrap] Swagger docs available at http://localhost:3001/docs
+```
+
+Open http://localhost:3001/docs to explore the interactive Swagger UI.
 
 ### 2. Start the frontend (port 3000)
 
@@ -71,13 +99,6 @@ npm run dev
 
 Open http://localhost:3000, drop or pick a CSV file, then click **Upload & Parse**.
 
-The frontend calls `http://localhost:3001` by default. To override:
-
-```bash
-# frontend/.env.local
-NEXT_PUBLIC_API_URL=http://localhost:3001
-```
-
 ---
 
 ## API
@@ -86,6 +107,7 @@ NEXT_PUBLIC_API_URL=http://localhost:3001
 
 - Content-Type: `multipart/form-data`
 - Form field: `file` (the CSV)
+- Limits: max **5 MB**, mimetype must be `text/csv`, `application/csv`, `application/vnd.ms-excel`, or `text/plain` (enforced by `ParseFilePipe` and the service)
 
 Expected CSV columns: `name,age,email,department` (department is optional).
 
@@ -186,9 +208,10 @@ npm start            # serves Next.js production build on :3000
 
 ## Tech Stack
 
-- NestJS 10 (Node.js + TypeScript)
+- NestJS 11 (Node.js + TypeScript)
+- @nestjs/config (env-driven configuration)
 - papaparse (CSV parsing)
 - class-validator + class-transformer (DTO validation)
-- @nestjs/swagger (API decorators)
+- @nestjs/swagger + swagger-ui-express (API docs at `/docs`)
 - Jest + ts-jest (unit tests)
 - Next.js 14 + React 18 (frontend)
