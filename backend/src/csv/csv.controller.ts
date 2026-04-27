@@ -11,8 +11,8 @@ import {
   ApiBadRequestResponse,
   ApiBody,
   ApiConsumes,
-  ApiCreatedResponse,
   ApiOperation,
+  ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -39,7 +39,8 @@ export class CsvController {
       required: ['file'],
     },
   })
-  @ApiCreatedResponse({
+  @ApiResponse({
+    status: HttpStatus.CREATED,
     description: 'CSV parsed and validated successfully',
     type: CsvUploadResponseDto,
   })
